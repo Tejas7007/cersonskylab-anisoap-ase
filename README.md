@@ -5,11 +5,11 @@
 *Bridging AniSOAP descriptors with atomistic simulations through ASE*
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/Python-3.9%2B-blue.svg)]()
-[![Tests](https://img.shields.io/badge/Tests-Pytest%20✔️-success)]()
-[![Stage](https://img.shields.io/badge/Stage-Prototype-orange)]()
+[![Python](https://img.shields.io/badge/Python-3.9%2B-blue.svg)](https://www.python.org/)
+[![ASE](https://img.shields.io/badge/ASE-Compatible-green.svg)](https://wiki.fysik.dtu.dk/ase/)
+[![Stage](https://img.shields.io/badge/Stage-Prototype-orange.svg)]()
 
-[Features](#-key-features) • [Installation](#-installation) • [Quick Start](#-quick-start) • [Documentation](#-documentation) • [Roadmap](#-roadmap)
+[Features](#-key-features) • [Installation](#-installation) • [Quick Start](#-quick-start) • [Documentation](#-documentation)
 
 </div>
 
@@ -17,17 +17,17 @@
 
 ## 🎯 What is AniSOAP-ASE?
 
-A **production-ready ASE calculator** that seamlessly integrates **AniSOAP** (Anisotropic Smooth Overlap of Atomic Positions) descriptors into the **Atomic Simulation Environment (ASE)** ecosystem.
+A **prototype ASE calculator** that integrates **AniSOAP** (Anisotropic Smooth Overlap of Atomic Positions) descriptors into the **Atomic Simulation Environment (ASE)** ecosystem.
 
-Enable ML-driven energy and force predictions directly within your ASE workflows — perfect for molecular dynamics, geometry optimization, and high-throughput screening.
+Currently supports energy predictions for molecular and solid-state systems, with a modular architecture designed for future extension to forces and stress tensors.
 
 ### Why This Calculator?
 
 - 🔌 **Drop-in replacement** for any ASE calculator
-- 🚀 **Production-tested** architecture inspired by CACE, MACE, and XTB-ASE
+- 🏗️ **Production-inspired** architecture from CACE, MACE, and XTB-ASE
 - 🎨 **Modular design** — swap descriptors and models without touching calculator code
 - ⚡ **Smart caching** — automatic result reuse for unchanged structures
-- 🧪 **Battle-tested** with comprehensive unit tests
+- 🧪 **Unit-tested** with comprehensive test coverage
 
 ---
 
@@ -49,7 +49,7 @@ Enable ML-driven energy and force predictions directly within your ASE workflows
 ### ⚡ **Performance**
 - Intelligent result caching
 - Skips recomputation for identical configs
-- Ready for batch processing
+- Batch processing (coming soon)
 - GPU/device support (coming soon)
 
 </td>
@@ -61,6 +61,12 @@ Enable ML-driven energy and force predictions directly within your ASE workflows
 ✅ ASE-compatible interface  
 ✅ Custom descriptor integration  
 ✅ Model flexibility  
+
+### Coming Soon
+🔜 Force predictions (∂E/∂r)  
+🔜 Stress tensor support  
+🔜 PyTorch backend with GPU  
+🔜 Batch evaluation  
 
 ---
 
@@ -75,7 +81,8 @@ pip install -e .
 
 ### Developer Install
 ```bash
-pip install -e ".[dev]"  # Includes pytest, black, etc.
+pip install -e .
+pip install pytest black  # Testing and formatting tools
 ```
 
 ### Requirements
@@ -143,12 +150,28 @@ tests/test_calculator.py::test_property_not_implemented PASSED   [100%]
 
 ```python
 AniSOAPCalculator(
-    backend: str = "numpy",           # Backend hint: "numpy" or "torch"
-    descriptor_fn: callable = None,   # Descriptor function: Atoms → array
-    model: callable = None,           # Model function: descriptor → energy (eV)
-    cache_results: bool = True,       # Enable intelligent caching
+    backend: str = "numpy",              # Backend hint: "numpy" or "torch"
+    descriptor_fn: callable = None,      # Descriptor function: Atoms → array
+    model: callable = None,              # Model function: descriptor → energy (eV)
+    energy_units_to_eV: float = 1.0,    # Conversion factor to eV
+    length_units_to_A: float = 1.0,     # Conversion factor to Ångström
+    cache_results: bool = True,          # Enable intelligent caching
+    label: str = "AniSOAPCalculator",   # Calculator label
 )
 ```
+
+### Units and Conventions
+
+All physical quantities follow ASE conventions:
+
+| Quantity | Unit | Notes |
+|----------|------|-------|
+| Energy | eV | Electron volts |
+| Length | Å | Ångström |
+| Forces (future) | eV/Å | Energy gradient |
+| Stress (future) | eV/Å³ | Voigt notation (6-component) |
+
+Use `energy_units_to_eV` and `length_units_to_A` to convert from your model's native units.
 
 ### Workflow
 

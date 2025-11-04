@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "anisoap-ase"
+version = "0.1.0"
+description = "ASE calculator bridge for AniSOAP (energy-only prototype)"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+authors = [{name="Tejas Dahiya"}]
+dependencies = ["ase>=3.22", "numpy>=1.24,<3"]

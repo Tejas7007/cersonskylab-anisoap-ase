@@ -1,0 +1,9 @@
+README.md
+pyproject.toml
+anisoap_ase/__init__.py
+anisoap_ase/calculator.py
+anisoap_ase.egg-info/PKG-INFO
+anisoap_ase.egg-info/SOURCES.txt
+anisoap_ase.egg-info/dependency_links.txt
+anisoap_ase.egg-info/requires.txt
+anisoap_ase.egg-info/top_level.txt

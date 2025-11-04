@@ -1,0 +1,20 @@
+Metadata-Version: 2.4
+Name: anisoap-ase
+Version: 0.1.0
+Summary: ASE calculator bridge for AniSOAP (energy-only prototype)
+Author: Tejas Dahiya
+License: MIT
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+Requires-Dist: ase>=3.22
+Requires-Dist: numpy<3,>=1.24
+
+# AniSOAP–ASE Calculator
+
+Standalone **ASE** calculator that connects to **AniSOAP**.  
+**Status:** Energy-only prototype (forces and stress to be added later).
+
+## Install (editable)
+```bash
+pip install -e .
+md

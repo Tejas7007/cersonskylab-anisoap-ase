@@ -14,7 +14,7 @@ class AniSOAPCalculator(Calculator):
 
     Status: energy-only
     - Units: energy returned/stored in eV (ASE convention).
-    - Future: add "forces", "stress" once the AniSOAP backend exposes them.
+    - Future: add "forces", "stress" once backend exposes them.
 
     Parameters
     ----------
@@ -26,6 +26,12 @@ class AniSOAPCalculator(Calculator):
         Function that maps descriptor -> scalar energy in eV.
     cache_results : bool, default True
         If True, skip recompute when atoms numbers+positions unchanged.
+    energy_units_to_eV : float, default 1.0
+        Multiply model energy by this factor before storing in results.
+    length_units_to_A : float, default 1.0
+        Reserved for future forces/stress conversions.
+    label : str | None
+        Optional ASE label.
     """
 
     implemented_properties = ["energy"]
@@ -36,15 +42,39 @@ class AniSOAPCalculator(Calculator):
         descriptor_fn: Optional[DescriptorFn] = None,
         model: Optional[ModelFn] = None,
         cache_results: bool = True,
+        energy_units_to_eV: float = 1.0,
+        length_units_to_A: float = 1.0,
+        label: Optional[str] = None,
         **kwargs,
     ):
-        super().__init__(**kwargs)
+        super().__init__(label=label, **kwargs)
         self.backend = backend
         self.descriptor_fn = descriptor_fn
         self.model = model
         self.cache_results = cache_results
+        self.energy_units_to_eV = float(energy_units_to_eV)
+        self.length_units_to_A = float(length_units_to_A)
         self._last_state: Optional[Tuple[Tuple[int, ...], bytes]] = None
 
+        # Help ASE parameter hashing/caching
+        self.parameters.update(
+            dict(
+                backend=backend,
+                cache_results=cache_results,
+                energy_units_to_eV=self.energy_units_to_eV,
+                length_units_to_A=self.length_units_to_A,
+            )
+        )
+
+    # ---- ASE change detection polish (like MACE does for .info) ----
+    def check_state(self, atoms, tol: float = 1e-15):
+        state = super().check_state(atoms, tol=tol)
+        if not state:
+            if getattr(self.atoms, "info", None) != getattr(atoms, "info", None):
+                state.append("info")
+        return state
+
+    # ---- internal helpers ----
     @staticmethod
     def _state(atoms) -> Tuple[Tuple[int, ...], bytes]:
         numbers = tuple(int(z) for z in atoms.numbers)
@@ -63,6 +93,7 @@ class AniSOAPCalculator(Calculator):
             return float(np.sum(desc)) * 1.0e-3
         return float(self.model(desc))
 
+    # ---- main ASE entrypoint ----
     def calculate(self, atoms=None, properties=("energy",), system_changes=all_changes):
         super().calculate(atoms, properties, system_changes)
 
@@ -78,7 +109,7 @@ class AniSOAPCalculator(Calculator):
 
         try:
             desc = self._compute_descriptor(atoms)
-            energy_ev = self._compute_energy_eV(desc)
+            energy_ev = self._compute_energy_eV(desc) * self.energy_units_to_eV
         except Exception as exc:
             raise CalculatorSetupError(
                 f"AniSOAPCalculator failed to compute energy: {exc}"
@@ -86,7 +117,11 @@ class AniSOAPCalculator(Calculator):
 
         self.results = {}
         if "energy" in properties:
-            self.results["energy"] = energy_ev
+            self.results["energy"] = float(energy_ev)
 
         if self.cache_results:
             self._last_state = state
+
+    # explicit passthrough; ASE will call this either way
+    def get_potential_energy(self, atoms=None, force_consistent: bool = False) -> float:
+        return super().get_potential_energy(atoms=atoms, force_consistent=force_consistent)

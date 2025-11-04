@@ -1,1 +1,2 @@
-__all__ = ['AniSOAPCalculator']
+from .calculator import AniSOAPCalculator
+__all__ = ["AniSOAPCalculator"]

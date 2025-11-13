@@ -1,127 +1,112 @@
 from __future__ import annotations
-from typing import Callable, Optional, Tuple
+
+from typing import Callable, Optional
 import numpy as np
+
 from ase.calculators.calculator import (
-    Calculator, all_changes, PropertyNotImplementedError, CalculatorSetupError
+    Calculator,
+    all_changes,
+    PropertyNotImplementedError,
 )
 
+from anisoap.representations import EllipsoidalDensityProjection
+from .model import linear_stub_model
+
+# Type aliases
 DescriptorFn = Callable[..., "np.ndarray | float | int"]
 ModelFn = Callable[..., float]
 
+
+# AniSOAP hyperparameters from benzene example
+ANI_HYPERS_BENZENE = {
+    "max_angular": 9,
+    "max_radial": 6,
+    "radial_basis_name": "gto",
+    "subtract_center_contribution": True,
+    "rotation_type": "quaternion",
+    "rotation_key": "c_q",
+    "cutoff_radius": 7.0,
+    "radial_gaussian_width": 1.5,
+    "basis_rcond": 1e-8,
+    "basis_tol": 1e-3,
+}
+
+
 class AniSOAPCalculator(Calculator):
     """
-    ASE-compatible calculator that bridges AniSOAP → ASE.
-
-    Status: energy-only
-    - Units: energy returned/stored in eV (ASE convention).
-    - Future: add "forces", "stress" once backend exposes them.
-
-    Parameters
-    ----------
-    backend : {"numpy","torch"}, optional
-        Hint for downstream descriptor/model (not enforced here).
-    descriptor_fn : callable(atoms) -> any, optional
-        Function that returns a descriptor object/array for the given Atoms.
-    model : callable(descriptor) -> energy_eV, optional
-        Function that maps descriptor -> scalar energy in eV.
-    cache_results : bool, default True
-        If True, skip recompute when atoms numbers+positions unchanged.
-    energy_units_to_eV : float, default 1.0
-        Multiply model energy by this factor before storing in results.
-    length_units_to_A : float, default 1.0
-        Reserved for future forces/stress conversions.
-    label : str | None
-        Optional ASE label.
+    ASE-compatible calculator that converts ellipsoidal frames into AniSOAP
+    descriptors and evaluates energies using a trained linear regressor.
     """
 
     implemented_properties = ["energy"]
 
     def __init__(
         self,
-        backend: str = "numpy",
         descriptor_fn: Optional[DescriptorFn] = None,
-        model: Optional[ModelFn] = None,
-        cache_results: bool = True,
-        energy_units_to_eV: float = 1.0,
-        length_units_to_A: float = 1.0,
-        label: Optional[str] = None,
+        model_fn: Optional[ModelFn] = None,
+        anisoap_hypers: Optional[dict] = None,
         **kwargs,
     ):
-        super().__init__(label=label, **kwargs)
-        self.backend = backend
+        """
+        Parameters
+        ----------
+        descriptor_fn : callable, optional
+            Custom hook: atoms -> descriptor vector.
+            If None, we compute AniSOAP power spectrum.
+        model_fn : callable, optional
+            Custom hook: descriptor -> energy.
+            Defaults to linear_stub_model (lr.predict wrapper).
+        anisoap_hypers : dict, optional
+            Hypers for EllipsoidalDensityProjection.
+        """
+        super().__init__(**kwargs)
+
+        if anisoap_hypers is None:
+            anisoap_hypers = ANI_HYPERS_BENZENE
+
+        # AniSOAP featurizer
+        self._anisoap = EllipsoidalDensityProjection(**anisoap_hypers)
+
         self.descriptor_fn = descriptor_fn
-        self.model = model
-        self.cache_results = cache_results
-        self.energy_units_to_eV = float(energy_units_to_eV)
-        self.length_units_to_A = float(length_units_to_A)
-        self._last_state: Optional[Tuple[Tuple[int, ...], bytes]] = None
+        self.model_fn = model_fn or linear_stub_model
 
-        # Help ASE parameter hashing/caching
-        self.parameters.update(
-            dict(
-                backend=backend,
-                cache_results=cache_results,
-                energy_units_to_eV=self.energy_units_to_eV,
-                length_units_to_A=self.length_units_to_A,
-            )
-        )
-
-    # ---- ASE change detection polish (like MACE does for .info) ----
-    def check_state(self, atoms, tol: float = 1e-15):
-        state = super().check_state(atoms, tol=tol)
-        if not state:
-            if getattr(self.atoms, "info", None) != getattr(atoms, "info", None):
-                state.append("info")
-        return state
-
-    # ---- internal helpers ----
-    @staticmethod
-    def _state(atoms) -> Tuple[Tuple[int, ...], bytes]:
-        numbers = tuple(int(z) for z in atoms.numbers)
-        pos = atoms.get_positions(wrap=False)
-        return numbers, np.ascontiguousarray(pos, dtype=np.float64).tobytes()
-
-    def _compute_descriptor(self, atoms):
-        if self.descriptor_fn is None:
-            # Minimal stub so the example runs; replace with real AniSOAP call.
-            return np.asarray(atoms.numbers, dtype=np.float64)
-        return self.descriptor_fn(atoms)
-
-    def _compute_energy_eV(self, desc) -> float:
-        if self.model is None:
-            # Minimal stub model: scaled sum in eV (demo only).
-            return float(np.sum(desc)) * 1.0e-3
-        return float(self.model(desc))
-
-    # ---- main ASE entrypoint ----
-    def calculate(self, atoms=None, properties=("energy",), system_changes=all_changes):
+    def calculate(
+        self,
+        atoms=None,
+        properties=("energy",),
+        system_changes=all_changes,
+    ):
+        """
+        1. Convert the ellipsoidal frame (atoms) → AniSOAP descriptor.
+        2. Apply trained linear model (lr.predict)
+        3. Return energy in ASE format
+        """
         super().calculate(atoms, properties, system_changes)
 
-        # Reject unsupported properties cleanly
-        for p in properties:
-            if p not in self.implemented_properties:
-                raise PropertyNotImplementedError(p)
+        if atoms is None:
+            atoms = self.atoms
+        else:
+            self.atoms = atoms
 
-        # Cache: skip work if geometry unchanged
-        state = self._state(atoms)
-        if self.cache_results and self._last_state == state and hasattr(self, "results"):
-            return  # results already set
+        if "energy" not in properties:
+            raise PropertyNotImplementedError(
+                "AniSOAPCalculator currently only provides 'energy'"
+            )
 
-        try:
-            desc = self._compute_descriptor(atoms)
-            energy_ev = self._compute_energy_eV(desc) * self.energy_units_to_eV
-        except Exception as exc:
-            raise CalculatorSetupError(
-                f"AniSOAPCalculator failed to compute energy: {exc}"
-            ) from exc
+        # ----- Descriptor computation -----
+        if self.descriptor_fn is not None:
+            desc = self.descriptor_fn(atoms)
+        else:
+            # Power spectrum returns shape (1, n_features)
+            x = self._anisoap.power_spectrum([atoms])
+            desc = np.array(x[0]).ravel()
 
-        self.results = {}
-        if "energy" in properties:
-            self.results["energy"] = float(energy_ev)
+        # ----- ML prediction -----
+        energy = float(self.model_fn(desc))
 
-        if self.cache_results:
-            self._last_state = state
+        # If needed: multiply by #atoms for total energy
+        # energy = energy * len(atoms)
 
-    # explicit passthrough; ASE will call this either way
-    def get_potential_energy(self, atoms=None, force_consistent: bool = False) -> float:
-        return super().get_potential_energy(atoms=atoms, force_consistent=force_consistent)
+        # ----- Store result -----
+        self.results["energy"] = energy
+

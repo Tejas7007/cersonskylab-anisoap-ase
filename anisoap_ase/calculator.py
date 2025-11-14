@@ -10,14 +10,16 @@ from ase.calculators.calculator import (
 )
 
 from anisoap.representations import EllipsoidalDensityProjection
-from .model import linear_stub_model
+from .model import linear_stub_model  # Our sklearn-loaded linear model
 
-# Type aliases
+# Type aliases for optional custom hooks
 DescriptorFn = Callable[..., "np.ndarray | float | int"]
 ModelFn = Callable[..., float]
 
 
-# AniSOAP hyperparameters from benzene example
+# ======================================================================================
+# AniSOAP Hyperparameters — EXACTLY the ones used in the benzene example
+# ======================================================================================
 ANI_HYPERS_BENZENE = {
     "max_angular": 9,
     "max_radial": 6,
@@ -32,10 +34,36 @@ ANI_HYPERS_BENZENE = {
 }
 
 
+# ======================================================================================
+# Automatically insert ellipsoid semiaxes if missing
+# ======================================================================================
+def _ensure_ellipsoid_semiaxes(atoms, a1=4.0, a2=4.0, a3=0.5):
+    """
+    Ensure c_diameter[1-3] exist on each frame, matching AniSOAP documentation.
+
+    The ellipsoids.xyz file does NOT include shape information, so we must add it.
+    """
+    n = len(atoms)
+
+    if "c_diameter[1]" not in atoms.arrays:
+        atoms.arrays["c_diameter[1]"] = np.ones(n) * a1
+
+    if "c_diameter[2]" not in atoms.arrays:
+        atoms.arrays["c_diameter[2]"] = np.ones(n) * a2
+
+    if "c_diameter[3]" not in atoms.arrays:
+        atoms.arrays["c_diameter[3]"] = np.ones(n) * a3
+
+
+# ======================================================================================
+# AniSOAP ASE Calculator
+# ======================================================================================
 class AniSOAPCalculator(Calculator):
     """
-    ASE-compatible calculator that converts ellipsoidal frames into AniSOAP
-    descriptors and evaluates energies using a trained linear regressor.
+    ASE-compatible calculator using AniSOAP descriptors + linear regressor.
+
+    Currently computes:
+      ✓ energy (eV)
     """
 
     implemented_properties = ["energy"]
@@ -44,69 +72,48 @@ class AniSOAPCalculator(Calculator):
         self,
         descriptor_fn: Optional[DescriptorFn] = None,
         model_fn: Optional[ModelFn] = None,
-        anisoap_hypers: Optional[dict] = None,
         **kwargs,
     ):
-        """
-        Parameters
-        ----------
-        descriptor_fn : callable, optional
-            Custom hook: atoms -> descriptor vector.
-            If None, we compute AniSOAP power spectrum.
-        model_fn : callable, optional
-            Custom hook: descriptor -> energy.
-            Defaults to linear_stub_model (lr.predict wrapper).
-        anisoap_hypers : dict, optional
-            Hypers for EllipsoidalDensityProjection.
-        """
         super().__init__(**kwargs)
 
-        if anisoap_hypers is None:
-            anisoap_hypers = ANI_HYPERS_BENZENE
-
-        # AniSOAP featurizer
-        self._anisoap = EllipsoidalDensityProjection(**anisoap_hypers)
-
+        # Either a custom descriptor function or AniSOAP
         self.descriptor_fn = descriptor_fn
-        self.model_fn = model_fn or linear_stub_model
 
-    def calculate(
-        self,
-        atoms=None,
-        properties=("energy",),
-        system_changes=all_changes,
-    ):
-        """
-        1. Convert the ellipsoidal frame (atoms) → AniSOAP descriptor.
-        2. Apply trained linear model (lr.predict)
-        3. Return energy in ASE format
-        """
+        # Either a custom ML model or our lr.pkl model
+        self.model_fn = model_fn if model_fn is not None else linear_stub_model
+
+        # Create AniSOAP descriptor calculator
+        self._anisoap = EllipsoidalDensityProjection(**ANI_HYPERS_BENZENE)
+
+    # --------------------------------------------------------------------------
+    def calculate(self, atoms=None, properties=("energy",), system_changes=all_changes):
         super().calculate(atoms, properties, system_changes)
 
         if atoms is None:
-            atoms = self.atoms
-        else:
-            self.atoms = atoms
+            raise ValueError("AniSOAPCalculator requires an Atoms object.")
 
-        if "energy" not in properties:
-            raise PropertyNotImplementedError(
-                "AniSOAPCalculator currently only provides 'energy'"
-            )
-
-        # ----- Descriptor computation -----
+        # ---------------------------------------------------------
+        # Compute descriptors
+        # ---------------------------------------------------------
         if self.descriptor_fn is not None:
+            # User-supplied descriptor
             desc = self.descriptor_fn(atoms)
+
         else:
-            # Power spectrum returns shape (1, n_features)
+            # Ensure required ellipsoid attributes exist
+            _ensure_ellipsoid_semiaxes(atoms)
+
+            # Compute AniSOAP power spectrum
             x = self._anisoap.power_spectrum([atoms])
+
+            # x has shape (1, n_features)
             desc = np.array(x[0]).ravel()
 
-        # ----- ML prediction -----
+        # ---------------------------------------------------------
+        # ML model prediction
+        # ---------------------------------------------------------
         energy = float(self.model_fn(desc))
 
-        # If needed: multiply by #atoms for total energy
-        # energy = energy * len(atoms)
-
-        # ----- Store result -----
+        # ASE stores energy in self.results
         self.results["energy"] = energy
 

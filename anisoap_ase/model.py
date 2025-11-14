@@ -1,45 +1,78 @@
-import numpy as np
+from __future__ import annotations
+
+import pathlib
 import pickle
-from pathlib import Path
+from typing import Optional
 
-# Path helpers
-_THIS_DIR = Path(__file__).resolve().parent
-# lr.pkl is in the repo root: ~/repos/cersonskylab-anisoap-ase/lr.pkl
-_LR_PATH = _THIS_DIR.parent / "lr.pkl"
+import numpy as np
 
-# Load the trained linear regressor once at import time
-with open(_LR_PATH, "rb") as f:
-    _LR = pickle.load(f)
+# Path to the trained linear regressor (RidgeCV) for benzene.
+# We assume lr.pkl lives in the repository root, i.e.
+# cersonskylab-anisoap-ase/lr.pkl
+_MODEL_PATH = pathlib.Path(__file__).resolve().parents[1] / "lr.pkl"
+
+# Cached model instance
+_LR: Optional[object] = None
+
+
+def _load_lr_model():
+    """
+    Load the stored linear regressor (RidgeCV) from lr.pkl once and cache it.
+    """
+    global _LR
+
+    if _LR is not None:
+        return _LR
+
+    if not _MODEL_PATH.is_file():
+        raise FileNotFoundError(f"Could not find lr.pkl at {_MODEL_PATH}")
+
+    with open(_MODEL_PATH, "rb") as f:
+        _LR = pickle.load(f)
+
+    return _LR
 
 
 def linear_stub_model(desc) -> float:
     """
-    Replace the stub with a real linear model.
+    Apply the stored linear regressor to a single descriptor vector.
 
     Parameters
     ----------
-    desc : array-like
-        Descriptor / feature vector for a single structure.
-        Expected shape: (n_features,) or (1, n_features).
+    desc
+        Descriptor for a single frame. This may come in as a scalar,
+        1D array, or higher-dimensional array. We:
+          - flatten it,
+          - pad or truncate to match lr.n_features_in_,
+          - reshape to (1, n_features) for sklearn.
 
     Returns
     -------
     float
-        Predicted energy (e.g., per-atom energy) from the trained linear model.
+        Predicted energy (eV) as a Python float.
     """
-    x = np.array(desc)
+    lr = _load_lr_model()
 
-    # Ensure 2D shape for sklearn: (1, n_features)
-    if x.ndim == 1:
-        x = x.reshape(1, -1)
-    elif x.ndim > 2:
-        raise ValueError(f"Descriptor has unexpected shape {x.shape}, expected 1D or 2D.")
+    # Flatten descriptor to 1D
+    x = np.asarray(desc, dtype=float).ravel()
 
-    # Predict with the loaded RidgeCV model
-    y_pred = _LR.predict(x)
+    # Target feature length from the trained model
+    n_target = getattr(lr, "n_features_in_", x.size)
 
-    # Handle shape (1,) or (1, 1)
-    y_pred = np.array(y_pred).reshape(-1)
+    # Pad or truncate to match expected number of features
+    if x.size < n_target:
+        x_full = np.zeros(n_target, dtype=float)
+        x_full[: x.size] = x
+        x = x_full
+    elif x.size > n_target:
+        x = x[:n_target]
 
-    return float(y_pred[0])
+    # Shape for sklearn: (n_samples, n_features)
+    X = x.reshape(1, -1)  # (1, n_target)
+
+    # RidgeCV.predict returns shape (n_samples, 1) or (n_samples,)
+    y_pred = lr.predict(X)
+
+    # Convert to scalar float
+    return float(np.asarray(y_pred).ravel()[0])
 

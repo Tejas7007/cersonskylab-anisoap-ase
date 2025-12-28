@@ -96,6 +96,7 @@ class AniSOAPCalculator(Calculator):
     def __init__(
         self,
         descriptor_fn: Optional[DescriptorFn] = None,
+        model: Optional[ModelFn] = None,  # Support both 'model' and 'model_fn'
         model_fn: Optional[ModelFn] = None,
         backend: str = "numpy",
         enable_forces: bool = False,
@@ -106,15 +107,23 @@ class AniSOAPCalculator(Calculator):
         # Either a custom descriptor function or AniSOAP
         self.descriptor_fn = descriptor_fn
 
-        # Either a custom ML model or our lr.pkl model
-        self.model_fn = model_fn if model_fn is not None else linear_stub_model
+        # Support both 'model' and 'model_fn' for backwards compatibility
+        if model is not None:
+            self.model_fn = model
+        elif model_fn is not None:
+            self.model_fn = model_fn
+        else:
+            self.model_fn = linear_stub_model
 
         # Backend selection
         self.backend = backend
         self.enable_forces = enable_forces
 
-        # Create AniSOAP descriptor calculator
-        self._anisoap = EllipsoidalDensityProjection(**ANI_HYPERS_BENZENE)
+        # Create AniSOAP descriptor calculator (only if using AniSOAP)
+        if descriptor_fn is None:
+            self._anisoap = EllipsoidalDensityProjection(**ANI_HYPERS_BENZENE)
+        else:
+            self._anisoap = None
         
         # PyTorch descriptor (lazy initialization)
         self._torch_descriptor = None
@@ -126,10 +135,12 @@ class AniSOAPCalculator(Calculator):
         if atoms is None:
             raise ValueError("AniSOAPCalculator requires an Atoms object.")
 
-        # ---------------------------------------------------------
-        # Validate ellipsoidal attributes FIRST
-        # ---------------------------------------------------------
-        _validate_ellipsoidal_attributes(atoms, frame_index=0)
+        # Check if forces are requested but not available FIRST
+        # This should happen before validation to match expected error behavior
+        if "forces" in properties and not (self.enable_forces and self.backend == "torch"):
+            raise PropertyNotImplementedError(
+                "Forces require backend='torch' and enable_forces=True"
+            )
 
         # ---------------------------------------------------------
         # Compute descriptors and energy/forces
@@ -137,6 +148,9 @@ class AniSOAPCalculator(Calculator):
         if "forces" in properties and self.enable_forces and self.backend == "torch":
             # Use PyTorch pathway with autodiff
             from .descriptors_torch import TorchAniSOAPDescriptor
+            
+            # Validate ellipsoidal attributes (only for AniSOAP descriptor)
+            _validate_ellipsoidal_attributes(atoms, frame_index=0)
             
             if self._torch_descriptor is None:
                 self._torch_descriptor = TorchAniSOAPDescriptor(ANI_HYPERS_BENZENE)
@@ -150,9 +164,12 @@ class AniSOAPCalculator(Calculator):
         else:
             # NumPy pathway (energy only)
             if self.descriptor_fn is not None:
-                # User-supplied descriptor
+                # User-supplied descriptor - NO validation needed
                 desc = self.descriptor_fn(atoms)
             else:
+                # Using AniSOAP descriptor - validate ellipsoidal attributes
+                _validate_ellipsoidal_attributes(atoms, frame_index=0)
+                
                 # Ensure required ellipsoid attributes exist
                 _ensure_ellipsoid_semiaxes(atoms)
 
@@ -169,9 +186,3 @@ class AniSOAPCalculator(Calculator):
 
             # ASE stores energy in self.results
             self.results["energy"] = energy
-            
-            # Forces not available in NumPy mode
-            if "forces" in properties:
-                raise PropertyNotImplementedError(
-                    "Forces require backend='torch' and enable_forces=True"
-                )

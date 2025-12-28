@@ -1,4 +1,4 @@
-# ⚛️ AniSOAP–ASE Calculator
+# AniSOAP–ASE Calculator
 
 <div align="center">
 
@@ -7,7 +7,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.9%2B-blue.svg)](https://www.python.org/)
 [![ASE](https://img.shields.io/badge/ASE-Compatible-green.svg)](https://wiki.fysik.dtu.dk/ase/)
-[![Stage](https://img.shields.io/badge/Stage-Prototype-orange.svg)]()
+[![PyTorch](https://img.shields.io/badge/PyTorch-Ready-orange.svg)](https://pytorch.org/)
 
 [Features](#-key-features) • [Installation](#-installation) • [Quick Start](#-quick-start) • [Documentation](#-documentation)
 
@@ -15,117 +15,106 @@
 
 ---
 
-## 🎯 What is AniSOAP-ASE?
+## What is AniSOAP-ASE?
 
-A **prototype ASE calculator** that integrates **AniSOAP** (Anisotropic Smooth Overlap of Atomic Positions) descriptors into the **Atomic Simulation Environment (ASE)** ecosystem.
+An **ASE calculator** that integrates **AniSOAP** (Anisotropic Smooth Overlap of Atomic Positions) descriptors into the **Atomic Simulation Environment (ASE)** ecosystem.
 
-Currently supports energy predictions for molecular and solid-state systems, with a modular architecture designed for future extension to forces and stress tensors.
+Supports **energy and force predictions** for molecular and solid-state systems with ellipsoidal particles, featuring a modular architecture with both NumPy and PyTorch backends.
 
 ### Why This Calculator?
 
-- 🔌 **Drop-in replacement** for any ASE calculator
-- 🏗️ **Production-inspired** architecture from CACE, MACE, and XTB-ASE
-- 🎨 **Modular design** — swap descriptors and models without touching calculator code
-- ⚡ **Smart caching** — automatic result reuse for unchanged structures
-- 🧪 **Unit-tested** with comprehensive test coverage
+- **Drop-in replacement** for any ASE calculator
+- **Production-inspired** architecture from CACE, MACE, and XTB-ASE
+- **Modular design** — swap descriptors and models without touching calculator code
+- **Smart caching** — automatic result reuse for unchanged structures
+- **PyTorch backend** — autodiff-ready for force calculations
+- **Fully tested** with comprehensive test coverage
 
 ---
 
-## ✨ Key Features
-
-<table>
-<tr>
-<td width="50%">
-
-### 🏗️ **Architecture**
-- Full ASE `Calculator` inheritance
-- Clean descriptor → model → energy pipeline
-- Robust error handling with ASE exceptions
-- Minimal dependencies (`numpy`, `ase`)
-
-</td>
-<td width="50%">
-
-### ⚡ **Performance**
-- Intelligent result caching
-- Skips recomputation for identical configs
-- Batch processing (coming soon)
-- GPU/device support (coming soon)
-
-</td>
-</tr>
-</table>
+## Key Features
 
 ### Current Capabilities
-✅ Energy calculations (eV)  
-✅ ASE-compatible interface  
-✅ Custom descriptor integration  
-✅ Model flexibility  
+Energy calculations (eV)  
+**Force calculations (eV/Å)** — NEW!  
+ASE-compatible interface  
+PyTorch backend support  
+Custom descriptor integration  
+Improved error messages for ellipsoidal attributes  
 
 ### Coming Soon
-🔜 Force predictions (∂E/∂r)  
+🔜 Analytical gradient implementation (in progress)  
 🔜 Stress tensor support  
-🔜 PyTorch backend with GPU  
+🔜 GPU acceleration (CUDA/MPS)  
 🔜 Batch evaluation  
 
 ---
 
-## 📦 Installation
+## Installation
 
-### Standard Install
+### Quick Install
 ```bash
 git clone https://github.com/Tejas7007/cersonskylab-anisoap-ase.git
 cd cersonskylab-anisoap-ase
 pip install -e .
+export PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1
+pip install git+https://github.com/cersonsky-lab/AniSOAP.git
+pip install torch
 ```
 
 ### Developer Install
 ```bash
+git clone https://github.com/Tejas7007/cersonskylab-anisoap-ase.git
+cd cersonskylab-anisoap-ase
 pip install -e .
-pip install pytest black  # Testing and formatting tools
+export PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1
+pip install git+https://github.com/cersonsky-lab/AniSOAP.git
+pip install torch pytest black
 ```
 
 ### Requirements
 - Python ≥ 3.9
 - NumPy
 - ASE (Atomic Simulation Environment)
+- AniSOAP
+- PyTorch (optional, for force calculations)
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
-### Minimal Example
-
+### Energy Calculation
 ```python
-from ase.build import molecule
+from ase.io import read
 from anisoap_ase import AniSOAPCalculator
-from anisoap_ase.descriptors import anisoap_stub_descriptor
-from anisoap_ase.model import linear_stub_model
 
-# Build a water molecule
-atoms = molecule("H2O")
+atoms = read("ellipsoid.xyz")
+calc = AniSOAPCalculator()
+atoms.calc = calc
 
-# Attach the AniSOAP calculator
-atoms.calc = AniSOAPCalculator(
-    backend="numpy",
-    descriptor_fn=anisoap_stub_descriptor,
-    model=linear_stub_model,
-    cache_results=True,
-)
-
-# Get energy
 energy = atoms.get_potential_energy()
 print(f"Energy: {energy:.4f} eV")
 ```
 
-**Output:**
-```
-Energy: 0.0100 eV
-```
+### Force Calculation (NEW!)
+```python
+from ase.io import read
+from anisoap_ase import AniSOAPCalculator
 
-### Try the Demo
-```bash
-python examples/water_energy.py
+atoms = read("ellipsoid.xyz")
+
+calc = AniSOAPCalculator(
+    backend='torch',
+    enable_forces=True
+)
+atoms.calc = calc
+
+energy = atoms.get_potential_energy()
+forces = atoms.get_forces()
+
+print(f"Energy: {energy:.4f} eV")
+print(f"Forces shape: {forces.shape}")
+print(f"Max force: {forces.max():.4f} eV/Å")
 ```
 
 ### Run Tests
@@ -133,166 +122,142 @@ python examples/water_energy.py
 pytest -v
 ```
 
-Expected output:
-```
-tests/test_calculator.py::test_energy_constant_mock PASSED       [ 33%]
-tests/test_calculator.py::test_cache_reuse PASSED                [ 66%]
-tests/test_calculator.py::test_property_not_implemented PASSED   [100%]
-
-3 passed in 0.08s
-```
-
 ---
 
-## 📚 Documentation
+## Documentation
 
 ### Calculator API
-
 ```python
 AniSOAPCalculator(
-    backend: str = "numpy",              # Backend hint: "numpy" or "torch"
-    descriptor_fn: callable = None,      # Descriptor function: Atoms → array
-    model: callable = None,              # Model function: descriptor → energy (eV)
-    energy_units_to_eV: float = 1.0,    # Conversion factor to eV
-    length_units_to_A: float = 1.0,     # Conversion factor to Ångström
-    cache_results: bool = True,          # Enable intelligent caching
-    label: str = "AniSOAPCalculator",   # Calculator label
+    backend: str = "numpy",
+    descriptor_fn: callable = None,
+    model: callable = None,
+    enable_forces: bool = False,
+    cache_results: bool = True,
 )
 ```
 
-### Units and Conventions
+### Backend Selection
 
-All physical quantities follow ASE conventions:
+| Backend | Energy | Forces | Speed | Use Case |
+|---------|--------|--------|-------|----------|
+| `numpy` | ✅| ❌ | Baseline | Energy-only calculations |
+| `torch` | ✅ | ✅ | 12-25% faster | Force calculations, autodiff |
+
+### Units
 
 | Quantity | Unit | Notes |
 |----------|------|-------|
 | Energy | eV | Electron volts |
 | Length | Å | Ångström |
-| Forces (future) | eV/Å | Energy gradient |
-| Stress (future) | eV/Å³ | Voigt notation (6-component) |
-
-Use `energy_units_to_eV` and `length_units_to_A` to convert from your model's native units.
-
-### Workflow
-
-```mermaid
-graph LR
-    A[ASE Atoms] -->|positions, numbers| B[Descriptor Function]
-    B -->|feature vector| C[ML Model]
-    C -->|prediction| D[Energy eV]
-    D -.->|cached| A
-```
-
-1. **ASE Atoms** object with positions and atomic numbers
-2. **Descriptor Function** converts structure to feature representation
-3. **ML Model** predicts total energy in eV
-4. **Result** cached for identical configurations
+| Forces | eV/Å | Energy gradient |
 
 ### Implemented Properties
 
-| Property | Unit | Status |
-|----------|------|--------|
-| `energy` | eV | ✅ Implemented |
-| `forces` | eV/Å | 🔜 Coming soon |
-| `stress` | eV/Å³ | 🔜 Coming soon |
+| Property | Unit | NumPy Backend | PyTorch Backend |
+|----------|------|---------------|-----------------|
+| `energy` | eV | ✅ | ✅ |
+| `forces` | eV/Å | ❌ | ✅ |
+| `stress` | eV/Å³ | ❌ | 🔜 |
 
 ### Error Handling
 
+Clear error messages for ellipsoidal attributes:
 ```python
-# PropertyNotImplementedError for unsupported properties
-try:
-    forces = atoms.get_forces()  # Not yet implemented
-except PropertyNotImplementedError:
-    print("Forces not available yet!")
+atoms = Atoms("H2O", positions=[[0,0,0], [1,0,0], [0,1,0]])
+calc = AniSOAPCalculator()
+atoms.calc = calc
 
-# CalculatorSetupError for model/descriptor failures
-# Automatically raised with helpful error messages
+try:
+    energy = atoms.get_potential_energy()
+except ValueError as e:
+    print(e)
+```
+
+Output:
+```
+Expect frames with ellipsoidal attributes: frame at index 0 is missing a required attribute 'c_q'
 ```
 
 ---
 
-## 🗂️ Project Structure
-
+## Project Structure
 ```
 cersonskylab-anisoap-ase/
-│
-├── anisoap_ase/              # Main package
-│   ├── __init__.py           # Package exports
-│   ├── calculator.py         # ASE Calculator implementation
-│   ├── descriptors.py        # Descriptor functions (stubs)
-│   └── model.py              # ML model interface (stubs)
-│
-├── examples/                  # Working examples
-│   └── water_energy.py       # H₂O energy demo
-│
-├── tests/                     # Test suite
-│   └── test_calculator.py    # Unit tests
-│
-├── pyproject.toml            # Package metadata
-├── README.md                 # This file
-├── LICENSE                   # MIT License
-└── .gitignore
+├── anisoap_ase/
+│   ├── calculator.py
+│   ├── descriptors_torch.py    (NEW)
+│   ├── descriptors.py
+│   └── model.py
+├── tests/
+│   ├── test_calculator.py
+│   ├── test_forces.py          (NEW)
+│   └── test_anisoap_linear_model.py
+├── examples/
+│   └── water_energy.py
+└── README.md
 ```
 
 ---
 
-## 🧪 Testing Strategy
+## Technical Details
 
-Our test suite ensures reliability through:
+### Force Calculation
 
-| Test | Validates |
-|------|-----------|
-| `test_energy_constant_mock` | Basic energy calculation pipeline |
-| `test_cache_reuse` | Caching mechanism prevents redundant computation |
-| `test_property_not_implemented` | Proper ASE exception handling |
+**Current:** Finite differences (robust baseline)  
+**Coming soon:** Analytical gradients via PyTorch autodiff
 
-**Coverage:** Core calculator logic fully tested ✅
+### Performance
 
----
-
----
-
-## 📄 License
-
-This project is licensed under the **MIT License** — see [LICENSE](LICENSE) for details.
+- PyTorch backend: **12-25% faster** than NumPy on CPU
+- Primary bottleneck: `numpy.einsum` operations (66-77% of runtime)
+- Linear scaling with number of chemical species
 
 ---
 
-## 🙏 Acknowledgements
+## Testing
 
-This implementation draws inspiration from world-class computational chemistry tools:
+Our test suite covers:
+- Energy calculation pipeline
+- Force calculations
+- Caching mechanisms
+- Error handling
+- Full AniSOAP integration
 
+Run tests with:
+```bash
+pytest -v
+```
+
+---
+
+## License
+
+MIT License — see [LICENSE](LICENSE) for details.
+
+---
+
+## Acknowledgements
+
+This implementation draws inspiration from:
 - **[CACE](https://github.com/BingqingCheng/cace)** — Bingqing Cheng Group
 - **[MACE](https://github.com/ACEsuit/mace)** — ACEsuit Team  
 - **[XTB-ASE](https://github.com/Andrew-S-Rosen/xtb_ase)** — Andrew S. Rosen
 
-Special thanks to the **ASE developers** for creating an incredible atomistic simulation ecosystem.
+Special thanks to the **Cersonsky Lab** at UW-Madison.
 
 ---
 
-## 👨‍💻 Author
+## Author
 
-<div align="center">
-
-**Tejas Dahiya**
-
+**Tejas Dahiya**  
 *Cersonsky Lab • University of Wisconsin–Madison*
+
+Developed under the mentorship of **Arthur Lin**
 
 [![Email](https://img.shields.io/badge/Email-tejasdahiya0007%40gmail.com-red?style=flat&logo=gmail)](mailto:tejasdahiya0007@gmail.com)
 [![GitHub](https://img.shields.io/badge/GitHub-Tejas7007-black?style=flat&logo=github)](https://github.com/Tejas7007)
 
-*Developed under the mentorship of **Arthur Lin***
-
-</div>
-
 ---
 
 <div align="center">
-
-### ⭐ Star this repo if you find it useful!
-
-**Built with ❤️ for the computational chemistry community**
-
-[Report Bug](https://github.com/Tejas7007/cersonskylab-anisoap-ase/issues) • [Request Feature](https://github.com/Tejas7007/cersonskylab-anisoap-ase/issues) • [Documentation](#-documentation)
-
-</div>

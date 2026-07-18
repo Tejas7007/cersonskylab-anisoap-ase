@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" role="img" aria-labelledby="title desc">
+  <title id="title">Central finite-difference force evaluation</title>
+  <desc id="desc">A structure is displaced in positive and negative directions, evaluated by the complete energy pipeline, and combined into a force.</desc>
+  <style>
+    .bg { fill: #f8fafc; }
+    .card { fill: #ffffff; stroke: #cbd5e1; stroke-width: 2; }
+    .head { fill: #0f172a; font: 700 22px system-ui, -apple-system, sans-serif; }
+    .text { fill: #475569; font: 500 15px system-ui, -apple-system, sans-serif; }
+    .arrow { fill: none; stroke: #64748b; stroke-width: 3; stroke-linecap: round; stroke-dasharray: 7 10; }
+  </style>
+  <rect class="bg" width="1200" height="300" rx="26" />
+  <text x="48" y="54" class="head">Optional force path</text>
+  <text x="48" y="79" class="text">Central differences evaluate the same descriptor-to-model pipeline at two nearby structures.</text>
+
+  <rect x="52" y="112" width="220" height="130" rx="20" class="card" />
+  <text x="82" y="148" class="head">structure</text>
+  <circle cx="132" cy="191" r="18" fill="#38bdf8" />
+  <ellipse cx="196" cy="191" rx="29" ry="14" fill="#a78bfa">
+    <animateTransform attributeName="transform" type="rotate" values="-8 196 191;8 196 191;-8 196 191" dur="4s" repeatCount="indefinite" />
+  </ellipse>
+
+  <path d="M286 176 H388" class="arrow">
+    <animate attributeName="stroke-dashoffset" from="0" to="-34" dur="1.8s" repeatCount="indefinite" />
+  </path>
+  <path d="M286 204 H388" class="arrow">
+    <animate attributeName="stroke-dashoffset" from="0" to="-34" dur="1.8s" repeatCount="indefinite" />
+  </path>
+
+  <rect x="402" y="102" width="222" height="62" rx="16" class="card" />
+  <text x="430" y="140" class="head">r + h</text>
+  <circle cx="580" cy="133" r="10" fill="#f59e0b">
+    <animate attributeName="cx" values="574;586;574" dur="2.4s" repeatCount="indefinite" />
+  </circle>
+
+  <rect x="402" y="190" width="222" height="62" rx="16" class="card" />
+  <text x="430" y="228" class="head">r − h</text>
+  <circle cx="580" cy="221" r="10" fill="#34d399">
+    <animate attributeName="cx" values="586;574;586" dur="2.4s" repeatCount="indefinite" />
+  </circle>
+
+  <path d="M638 133 H742" class="arrow">
+    <animate attributeName="stroke-dashoffset" from="0" to="-34" dur="1.8s" repeatCount="indefinite" />
+  </path>
+  <path d="M638 221 H742" class="arrow">
+    <animate attributeName="stroke-dashoffset" from="0" to="-34" dur="1.8s" repeatCount="indefinite" />
+  </path>
+
+  <rect x="756" y="102" width="182" height="62" rx="16" class="card" />
+  <text x="788" y="140" class="head">E(r + h)</text>
+  <rect x="756" y="190" width="182" height="62" rx="16" class="card" />
+  <text x="788" y="228" class="head">E(r − h)</text>
+
+  <path d="M952 176 H1022" class="arrow">
+    <animate attributeName="stroke-dashoffset" from="0" to="-34" dur="1.8s" repeatCount="indefinite" />
+  </path>
+
+  <rect x="1036" y="133" width="112" height="86" rx="20" fill="#0f172a" />
+  <text x="1070" y="170" fill="#f8fafc" font-family="system-ui, sans-serif" font-size="18" font-weight="700">force</text>
+  <path d="M1092 180 v22 M1081 191 l11 11 11-11" fill="none" stroke="#34d399" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <animateTransform attributeName="transform" type="translate" values="0 -2;0 4;0 -2" dur="2.5s" repeatCount="indefinite" />
+  </path>
+</svg>

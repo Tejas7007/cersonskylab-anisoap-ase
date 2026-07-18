@@ -1,0 +1,28 @@
+cff-version: 1.2.0
+title: AniSOAP-ASE
+message: >-
+  If you use this adapter, cite this repository together with the upstream
+  AniSOAP and ASE software used in your workflow.
+type: software
+authors:
+  - given-names: Tejas
+    family-names: Dahiya
+    affiliation: University of Wisconsin-Madison
+repository-code: https://github.com/Tejas7007/cersonskylab-anisoap-ase
+license: MIT
+version: 0.2.0
+abstract: >-
+  An ASE calculator adapter that connects AniSOAP or custom descriptors to
+  injected scalar energy models, with optional central finite-difference
+  forces and explicit ellipsoidal-metadata validation.
+keywords:
+  - AniSOAP
+  - Atomic Simulation Environment
+  - atomistic machine learning
+  - molecular simulation
+  - descriptors
+references:
+  - type: software
+    title: AniSOAP
+    repository-code: https://github.com/cersonsky-lab/AniSOAP
+    license: Apache-2.0

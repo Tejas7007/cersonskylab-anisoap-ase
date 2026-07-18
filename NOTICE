@@ -1,0 +1,17 @@
+AniSOAP-ASE
+Copyright 2026 Tejas Dahiya
+
+This software provides an independent ASE integration layer for AniSOAP:
+https://github.com/cersonsky-lab/AniSOAP
+
+AniSOAP is developed by the Cersonsky Lab and distributed under the Apache
+License, Version 2.0. AniSOAP is an external dependency and is not redistributed
+as part of this repository.
+
+This project also depends on the Atomic Simulation Environment (ASE):
+https://gitlab.com/ase/ase
+
+The repository was developed during a Fall 2025 Open Source Program Office
+internship with the Cersonsky Lab at the University of Wisconsin-Madison.
+This notice does not imply endorsement by AniSOAP's authors, ASE's authors, the
+Cersonsky Lab, or the University of Wisconsin-Madison.

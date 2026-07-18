@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 420" role="img" aria-labelledby="title desc">
+  <title id="title">AniSOAP-ASE descriptor-to-energy pipeline</title>
+  <desc id="desc">Animated ellipsoidal particles flow through an AniSOAP descriptor and an injected energy model into ASE energy and force results.</desc>
+  <style>
+    .bg { fill: #0f172a; }
+    .panel { fill: #172033; stroke: #334155; stroke-width: 2; }
+    .label { fill: #cbd5e1; font: 600 18px system-ui, -apple-system, sans-serif; }
+    .small { fill: #94a3b8; font: 500 14px system-ui, -apple-system, sans-serif; }
+    .title { fill: #f8fafc; font: 700 34px system-ui, -apple-system, sans-serif; }
+    .wire { fill: none; stroke: #64748b; stroke-width: 3; stroke-linecap: round; stroke-dasharray: 8 12; }
+    .accent-a { fill: #38bdf8; }
+    .accent-b { fill: #f59e0b; }
+    .accent-c { fill: #a78bfa; }
+    .accent-d { fill: #34d399; }
+  </style>
+
+  <rect class="bg" width="1200" height="420" rx="28" />
+  <text x="54" y="58" class="title">AniSOAP-ASE</text>
+  <text x="54" y="86" class="small">A transparent adapter between atomistic descriptors, energy models, and ASE</text>
+
+  <rect x="52" y="122" width="260" height="232" rx="22" class="panel" />
+  <text x="78" y="158" class="label">ASE structure</text>
+  <text x="78" y="184" class="small">positions · species · orientations</text>
+
+  <g transform="translate(182 256)">
+    <ellipse rx="62" ry="25" class="accent-a" opacity="0.9">
+      <animateTransform attributeName="transform" type="rotate" values="-10;8;-10" dur="5s" repeatCount="indefinite" />
+    </ellipse>
+    <circle cx="-52" cy="-45" r="17" class="accent-b">
+      <animate attributeName="cy" values="-45;-53;-45" dur="3.2s" repeatCount="indefinite" />
+    </circle>
+    <ellipse cx="61" cy="-39" rx="25" ry="13" class="accent-c">
+      <animateTransform attributeName="transform" type="rotate" values="0 61 -39;18 61 -39;0 61 -39" dur="4.2s" repeatCount="indefinite" />
+    </ellipse>
+    <circle cx="47" cy="48" r="14" class="accent-d">
+      <animate attributeName="r" values="14;18;14" dur="3.8s" repeatCount="indefinite" />
+    </circle>
+    <path d="M-82 0 C-50 -72 52 -72 84 0 C52 72 -50 72 -82 0Z" fill="none" stroke="#475569" stroke-width="2" stroke-dasharray="5 8" />
+  </g>
+
+  <path d="M326 238 H420" class="wire">
+    <animate attributeName="stroke-dashoffset" from="0" to="-40" dur="2s" repeatCount="indefinite" />
+  </path>
+
+  <rect x="434" y="122" width="270" height="232" rx="22" class="panel" />
+  <text x="460" y="158" class="label">AniSOAP descriptor</text>
+  <text x="460" y="184" class="small">validated ellipsoidal metadata</text>
+  <g transform="translate(472 220)">
+    <rect width="24" height="88" rx="8" class="accent-a">
+      <animate attributeName="height" values="88;61;88" dur="3.2s" repeatCount="indefinite" />
+      <animate attributeName="y" values="0;27;0" dur="3.2s" repeatCount="indefinite" />
+    </rect>
+    <rect x="40" width="24" height="58" rx="8" class="accent-b">
+      <animate attributeName="height" values="58;94;58" dur="3.7s" repeatCount="indefinite" />
+    </rect>
+    <rect x="80" width="24" height="104" rx="8" class="accent-c">
+      <animate attributeName="height" values="104;72;104" dur="4.1s" repeatCount="indefinite" />
+      <animate attributeName="y" values="0;32;0" dur="4.1s" repeatCount="indefinite" />
+    </rect>
+    <rect x="120" width="24" height="73" rx="8" class="accent-d">
+      <animate attributeName="height" values="73;48;73" dur="3.4s" repeatCount="indefinite" />
+    </rect>
+    <rect x="160" width="24" height="96" rx="8" class="accent-a" opacity="0.72">
+      <animate attributeName="height" values="96;67;96" dur="4.5s" repeatCount="indefinite" />
+      <animate attributeName="y" values="0;29;0" dur="4.5s" repeatCount="indefinite" />
+    </rect>
+  </g>
+
+  <path d="M718 238 H812" class="wire">
+    <animate attributeName="stroke-dashoffset" from="0" to="-40" dur="2s" repeatCount="indefinite" />
+  </path>
+
+  <rect x="826" y="122" width="322" height="232" rx="22" class="panel" />
+  <text x="852" y="158" class="label">Injected energy model</text>
+  <text x="852" y="184" class="small">callable or predict-style interface</text>
+
+  <g transform="translate(852 218)">
+    <rect width="118" height="78" rx="16" fill="#202c42" stroke="#38bdf8" stroke-width="2" />
+    <text x="20" y="34" class="small">energy</text>
+    <text x="20" y="59" class="label">E</text>
+    <circle cx="92" cy="39" r="10" class="accent-a">
+      <animate attributeName="opacity" values="0.35;1;0.35" dur="2.6s" repeatCount="indefinite" />
+    </circle>
+
+    <rect x="138" width="132" height="78" rx="16" fill="#202c42" stroke="#34d399" stroke-width="2" />
+    <text x="158" y="34" class="small">optional</text>
+    <text x="158" y="59" class="label">forces</text>
+    <path d="M242 28 v24 M232 42 l10 10 10-10" fill="none" stroke="#34d399" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+      <animateTransform attributeName="transform" type="translate" values="0 -3;0 4;0 -3" dur="2.8s" repeatCount="indefinite" />
+    </path>
+  </g>
+  <text x="987" y="326" class="small" text-anchor="middle">Native ASE caching and state tracking</text>
+</svg>

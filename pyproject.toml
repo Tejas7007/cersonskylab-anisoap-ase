@@ -1,0 +1,56 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "anisoap-ase"
+version = "0.2.0"
+description = "ASE calculator adapter for AniSOAP descriptor-based energy models"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [{name = "Tejas Dahiya"}]
+keywords = [
+  "ASE",
+  "AniSOAP",
+  "atomistic machine learning",
+  "molecular simulation",
+  "descriptors",
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: Chemistry",
+  "Topic :: Scientific/Engineering :: Physics",
+]
+dependencies = [
+  "ase>=3.22",
+  "numpy>=1.24,<3",
+]
+
+[project.optional-dependencies]
+test = [
+  "pytest>=8",
+  "ruff>=0.9",
+]
+
+[project.urls]
+Repository = "https://github.com/Tejas7007/cersonskylab-anisoap-ase"
+AniSOAP = "https://github.com/cersonsky-lab/AniSOAP"
+
+[tool.setuptools.packages.find]
+include = ["anisoap_ase*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
